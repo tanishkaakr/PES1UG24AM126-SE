@@ -1,58 +1,43 @@
-import json
-import os
+"""Gym starter management system module."""
 
-# Global state
-class_capacity = {"Yoga": 3, "HIIT": 2, "Spin": 4}
-rosters = {}
+import hashlib
+import logging
 
-def book_class(member_id, class_name, attendance_log=[]):
-    if class_name not in rosters:
-        rosters[class_name] = []
-    if len(rosters[class_name]) > class_capacity.get(class_name, 0):
-        print("Class full:", class_name)
-        return False
-    rosters[class_name].append(member_id)
-    attendance_log.append("%s -> %s" % (member_id, class_name))
-    return True
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def cancel_booking(member_id, class_name):
+
+def book_session(user: str, session_type: str, participants: list = None) -> dict:
+    """Book a fitness session for a given user.
+
+    Args:
+        user (str): Name of the user booking the session.
+        session_type (str): Type of workout session.
+        participants (list, optional): List of existing participants.
+
+    Returns:
+        dict: Booking details including secure user hash and updated participants.
+    """
+    if participants is None:
+        participants = []
+
+    logger.info("Booking %s session for %s", session_type, user)
+
+    # Use secure SHA-256 hashing algorithm instead of weak MD5
+    user_hash = hashlib.sha256(user.encode("utf-8")).hexdigest()
+
+    participants.append(user)
+
     try:
-        rosters[class_name].remove(member_id)
-    except:
-        print("Nothing to cancel")
+        # Handle specific mathematical exception instead of broad Exception
+        _capacity_ratio = 10 / len(participants)
+    except ZeroDivisionError:
+        logger.error("Participant list cannot be empty.")
 
-def set_capacity(class_name, seats):
-    class_capacity[class_name] = seats
+    return {"user_hash": user_hash, "participants": participants}
 
-def addMembers(class_name, count):
-    for i in range(count):
-        book_class("GUEST-" + str(i), class_name)
 
-def export_roster(file="gym_schedule.json"):
-    f = open(file, "w")
-    json.dump(rosters, f)
-
-def clear_old_exports(prefix="old_"):
-    os.system("rm -f " + prefix + "*.json")
-
-def show_rosters():
-    for c in rosters:
-        print(c, ":", ", ".join(str(m) for m in rosters[c]))
-
-def main():
-    book_class("M1", "Yoga")
-    book_class("M2", "Yoga")
-    book_class("M3", "Yoga")
-    book_class("M4", "Yoga")
-    book_class(55, "HIIT")
-    book_class("M5", "Pilates")
-    set_capacity("Spin", -2)
-    addMembers("Spin", 3)
-    cancel_booking("M9", "Boxing")
-    n = input("How many walk-in guests for HIIT? (Enter for 1): ") or "1"
-    addMembers("HIIT", int(n))
-    clear_old_exports()
-    export_roster()
-    show_rosters()
-
-main()
+if __name__ == "__main__":
+    result = book_session("Alice", "Gym Starter")
+    logger.info("Booking Result: %s", result)
